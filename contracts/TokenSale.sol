@@ -5,55 +5,73 @@ import "openzeppelin-solidity/contracts/crowdsale/validation/WhitelistedCrowdsal
 import "openzeppelin-solidity/contracts/crowdsale/emission/MintedCrowdsale.sol";
 import './Token.sol';
 
+/*
+  Constract handling public token sale. Sale price changes in steps depending on amount sold
+  and time passed.
+*/
 contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsale {
   using SafeMath for uint256;
 
+  // total ico cap
   uint256 public cap;
+
+  // step rates - token prices with discounts for each phase
   uint256[] public rates;
-  uint256[] public capsTo;
+
+  // token caps for each phase
+  uint256[] public caps;
+
   uint256 public phaseLength;
 
   uint256 public phase = 0;
 
+  // parameter for storing overflowWei of the last investor
   uint256 public overflowWei;
 
   constructor(
       Token _token,
       address _wallet,
-      uint256 _cap,
       uint256[] _rates,
-      uint256[] _capsTo,
+      uint256[] _caps,
       uint256 _openingTime,
-      uint256 _phaseLength
+      uint256 _closingTime
   )
       public
       Crowdsale(_rates[0], _wallet, _token)
-      TimedCrowdsale(_openingTime, _openingTime.add(_phaseLength.mul(1 days)))
+      TimedCrowdsale(_openingTime, _closingTime)
   {
      require(_rates.length > 0);
-     require(_rates.length == _capsTo.length);
-
-     require(_cap > 0);
-
-     require(_phaseLength > 0);
-
-     cap = _cap;
+     require(_rates.length == _caps.length);
      rates = _rates;
-     capsTo = _capsTo;
-     phaseLength = _phaseLength;
+     caps = _caps;
+
+     cap = _caps[_caps.length.sub(1)];
+     require(cap > 0);
+
+     // phase length depends on total duration of ico and phases count
+     phaseLength = _closingTime.sub(_openingTime).div(_rates.length);
+
+     // closing time is changed in every phase
+     closingTime = openingTime.add(phaseLength);
+
    }
 
+   /*
+    OpenZeppelin method override for handling phases changing in time - setting new closing time
+   */
   function _preValidatePurchase(address _beneficiary, uint256 _weiAmount) internal {
-    if (now > closingTime && phase < rates.length) {
-      uint256 _phasesPassed = (now.sub(closingTime)).div(phaseLength.mul(1 days));
-      closingTime = closingTime.add(phaseLength.mul(1 days));
-      phase = phase.add(_phasesPassed);
+    while (now > closingTime && phase < rates.length) {
+       phase = phase.add(1);
+       closingTime = closingTime.add(phaseLength);
     }
     super._preValidatePurchase(_beneficiary, _weiAmount);
     require(token.totalSupply() < cap);
     require(phase < rates.length);
   }
 
+  /*
+   OpenZeppelin method override for handling purchase and phases changing depending on the amount bought
+  */
   function _processPurchase(address _beneficiary, uint256 _tokenAmount) internal {
     _tokenAmount = 0;
     uint256 _weiSpent = 0;
@@ -65,20 +83,20 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
 
     // while we can purchase all tokens in current cap-rate step, move to other step
     while (_weiAmount > 0 && phase < rates.length) {
-      _tokensForRate = capsTo[phase].sub(_currentSupply);
+      _tokensForRate = caps[phase].sub(token.totalSupply()).sub(_tokenAmount);
       _weiReq = _tokensForRate.div(rates[phase]);
       if (_weiReq > _weiAmount) {
         // if wei required is more or equal than we have - we can purchase only part of the cap-rate step tokens
          _tokensForRate = _weiAmount.mul(rates[phase]);
          _weiReq = _weiAmount;
+      } else {
+        phase = phase.add(1);
+        closingTime = closingTime.add(phaseLength);
       }
 
       _weiSpent = _weiSpent.add(_weiReq);
       _weiAmount = _weiAmount.sub(_weiReq);
       _tokenAmount = _tokenAmount.add(_tokensForRate);
-      _currentSupply = token.totalSupply().add(_tokenAmount);
-      phase = phase.add(1);
-      closingTime.add(phaseLength.mul(1 days));
     }
 
     super._processPurchase(_beneficiary, _tokenAmount);
@@ -98,7 +116,7 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
   }
 
   /*
-  Method open-zeppelin override, we need to sub if any wei was returned
+    Method OpenZeppelin override, we need to sub if any wei was returned
   */
   function _forwardFunds() internal {
     wallet.transfer(msg.value.sub(overflowWei));
@@ -106,8 +124,8 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
   }
 
   /*
- OpenZeppelin FinalizableCrowdsale method override - token distribution
- and finishing routines
+   OpenZeppelin FinalizableCrowdsale method override - token distribution
+   and finishing routines
   */
   function finalization() internal {
     Token _token = Token(token);
@@ -120,5 +138,14 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
     _token.transferOwnership(wallet);
 
     super.finalization();
+  }
+
+  /*
+    OpenZeppelin method override for handling total ico cap.
+  */
+  function hasClosed() public view returns (bool) {
+    Token _token = Token(token);
+    bool _soldOut = _token.totalSupply() >= cap;
+    return super.hasClosed() || _soldOut;
   }
 }

@@ -5,7 +5,12 @@ import "openzeppelin-solidity/contracts/crowdsale/validation/WhitelistedCrowdsal
 import "openzeppelin-solidity/contracts/crowdsale/emission/MintedCrowdsale.sol";
 import './Token.sol';
 
-contract TokenPresale is MintedCrowdsale, TimedCrowdsale, WhitelistedCrowdsale {
+/*
+  Contract handling token presale. Basicaly combination of openzeppelin contacts.
+  Two additional features are that it returns eth for the last investor if sent too much
+  and checks private presale token cap.
+*/
+contract TokenPresale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsale {
     using SafeMath for uint256;
 
     uint256 public cap;
@@ -30,7 +35,7 @@ contract TokenPresale is MintedCrowdsale, TimedCrowdsale, WhitelistedCrowdsale {
 
     function _preValidatePurchase(address _beneficiary, uint256 _weiAmount) internal {
       super._preValidatePurchase(_beneficiary, _weiAmount);
-      require(cap < token.totalSupply());
+      require(cap > token.totalSupply());
     }
 
     function _processPurchase(address _beneficiary, uint256 _tokenAmount) internal {
@@ -56,5 +61,14 @@ contract TokenPresale is MintedCrowdsale, TimedCrowdsale, WhitelistedCrowdsale {
     function finalization() internal {
       Token _token = Token(token);
       _token.transferOwnership(wallet);
+    }
+
+    /**
+      OpenZeppelin TimedCrowdsale method override - checks whether the presale is over
+    */
+    function hasClosed() public view returns (bool) {
+      Token _token = Token(token);
+      bool _soldOut = _token.totalSupply() >= cap;
+      return super.hasClosed() || _soldOut;
     }
 }
