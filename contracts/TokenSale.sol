@@ -21,11 +21,13 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
   // token caps for each phase
   uint256[] public caps;
 
+  // phase lenth in seconds - calculated automatically in consturctor
   uint256 public phaseLength;
 
+  // helper param - current phase counter
   uint256 public phase = 0;
 
-  // parameter for storing overflowWei of the last investor
+  // parameter for storing overflowWei of the last investor if sent too much eth
   uint256 public overflowWei;
 
   constructor(
@@ -51,9 +53,8 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
      // phase length depends on total duration of ico and phases count
      phaseLength = _closingTime.sub(_openingTime).div(_rates.length);
 
-     // closing time is changed in every phase
+     // closing time is changed once current phase ends
      closingTime = openingTime.add(phaseLength);
-
    }
 
    /*
@@ -90,6 +91,7 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
          _tokensForRate = _weiAmount.mul(rates[phase]);
          _weiReq = _weiAmount;
       } else {
+        // if we afford to buy more than there are in current phase move to next phase
         phase = phase.add(1);
         closingTime = closingTime.add(phaseLength);
       }
@@ -124,8 +126,7 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
   }
 
   /*
-   OpenZeppelin FinalizableCrowdsale method override - token distribution
-   and finishing routines
+   OpenZeppelin override - burn all leftover tokens finish minting and return ownership
   */
   function finalization() internal {
     Token _token = Token(token);
@@ -141,7 +142,7 @@ contract TokenSale is MintedCrowdsale, FinalizableCrowdsale, WhitelistedCrowdsal
   }
 
   /*
-    OpenZeppelin method override for handling total ico cap.
+    OpenZeppelin method override for checking if total ico cap reached.
   */
   function hasClosed() public view returns (bool) {
     Token _token = Token(token);

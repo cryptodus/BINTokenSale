@@ -90,7 +90,7 @@ contract('TokenPresaleTest', function (accounts) {
       diff.should.be.bignumber.gt(ether(4895));
       diff.should.be.bignumber.lt(ether(4896));
     });
-    it('should mint  tokens while purchasing during presale', async function() {
+    it('should mint tokens while purchasing during presale', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
       await this.presale.addToWhitelist(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(1)}).should.be.fulfilled;
