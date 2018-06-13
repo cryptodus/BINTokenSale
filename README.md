@@ -1,4 +1,4 @@
-# BINTokenSale
+# BIRTokenSale
 
 There are three stages of ICO: <br />
 private presale - handled manually - tokens distributed before public presale <br />
