@@ -38,12 +38,12 @@ contract('TokenPresaleTest', function (accounts) {
   describe('purchasing tokens', function() {
     it('should not accept payments beforen presale opening time', async function() {
       await increaseTimeTo(latestTime());
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
     it('should accept payments during presale', async function() {
        await increaseTimeTo(this.openingTime + duration.weeks(1));
-       await this.presale.addToWhitelist(investor0);
+       await this.presale.addAddressToWhitelist(investor0);
        await this.presale.buyTokens(investor0, {from: investor0, value: ether(1) }).should.be.fulfilled;
     });
     it('should reject payments during presale if not whitelisted', async function() {
@@ -52,26 +52,26 @@ contract('TokenPresaleTest', function (accounts) {
     });
     it('should not allow buy tokens if all presale tokens bought presale not finished yet', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor0);
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor0);
+      await this.presale.addAddressToWhitelist(investor1);
       await this.presale.buyTokens(investor0, {from: investor0, value: ether(5000) }).should.be.fulfilled;
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
     it('should not accept payments after closing time', async function() {
        await increaseTimeTo(this.closingTime + duration.weeks(1));
-       await this.presale.addToWhitelist(investor1);
+       await this.presale.addAddressToWhitelist(investor1);
        await this.presale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
     it('should buy correct amount of tokens in the presale', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(rate*1e18);
     });
     it('should forward funds to wallet after purchase during the presale', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       var amount = ether(1);
       const prePurchaseBalance = web3.eth.getBalance(wallet);
       await this.presale.buyTokens(investor1, {from: investor1, value: amount }).should.be.fulfilled;
@@ -82,7 +82,7 @@ contract('TokenPresaleTest', function (accounts) {
     });
     it('should return funds to investor when too much eth was sent for all presale tokens', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       const prePurchaseBalance = web3.eth.getBalance(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(5000) }).should.be.fulfilled;
       const postPurchaseBalance = web3.eth.getBalance(investor1);
@@ -92,7 +92,7 @@ contract('TokenPresaleTest', function (accounts) {
     });
     it('should mint tokens while purchasing during presale', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(1)}).should.be.fulfilled;
       let totalSupply = await this.token.totalSupply();
       totalSupply.should.be.bignumber.equal(130000e18);
@@ -110,7 +110,7 @@ contract('TokenPresaleTest', function (accounts) {
     });
     it('should allow finalize before closing time and tokens are sold', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(5000) }).should.be.fulfilled;
       await this.presale.finalize().should.be.fulfilled;
     });
@@ -130,7 +130,7 @@ contract('TokenPresaleTest', function (accounts) {
     });
     it('should not mint any more tokens when presale finalized', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.presale.addToWhitelist(investor1);
+      await this.presale.addAddressToWhitelist(investor1);
       await this.presale.buyTokens(investor1, {from: investor1, value: ether(1)}).should.be.fulfilled;
       let totalSupplyBefore = await this.token.totalSupply();
       await increaseTimeTo(this.closingTime + duration.weeks(1));

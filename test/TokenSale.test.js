@@ -43,12 +43,12 @@ contract('TokenSaleTest', function (accounts) {
   describe('purchasing tokens', function() {
     it('should not accept payments beforen sale opening time', async function() {
       await increaseTimeTo(latestTime());
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
     it('should accept payments during sale', async function() {
        await increaseTimeTo(this.openingTime + duration.weeks(1));
-       await this.sale.addToWhitelist(investor0);
+       await this.sale.addAddressToWhitelist(investor0);
        await this.sale.buyTokens(investor0, {from: investor0, value: ether(1) }).should.be.fulfilled;
     });
     it('should reject payments during sale if not whitelisted', async function() {
@@ -57,8 +57,8 @@ contract('TokenSaleTest', function (accounts) {
     });
     it('should not allow buy tokens if all sale tokens bought presale not finished yet', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.sale.addToWhitelist(investor0);
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor0);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor0, {from: investor0, value: ether(11000) }).should.be.fulfilled;
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
@@ -72,63 +72,63 @@ contract('TokenSaleTest', function (accounts) {
     });
     it('should not accept payments after closing time', async function() {
        await increaseTimeTo(this.closingTime + duration.weeks(1));
-       await this.sale.addToWhitelist(investor1);
+       await this.sale.addAddressToWhitelist(investor1);
        await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
     it('should buy correct amount of tokens in the sale 1 phase', async function() {
       await increaseTimeTo(this.openingTime + duration.days(1));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(saleRates[0]*1e18);
     });
     it('should buy correct amount of tokens in the sale 2 phase', async function() {
       await increaseTimeTo(this.openingTime + duration.days(1));
-      await this.sale.addToWhitelist(investor0);
+      await this.sale.addAddressToWhitelist(investor0);
       await this.sale.buyTokens(investor0, {from: investor0, value: ether(6500) }).should.be.fulfilled;
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(saleRates[1]*1e18);
     });
     it('should buy correct amount of tokens in the sale 3 phase', async function() {
       await increaseTimeTo(this.openingTime + duration.days(1));
-      await this.sale.addToWhitelist(investor0);
+      await this.sale.addAddressToWhitelist(investor0);
       await this.sale.buyTokens(investor0, {from: investor0, value: ether(8300) }).should.be.fulfilled;
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(saleRates[2]*1e18);
     });
     it('should buy correct amount of tokens in the sale 1 phase by date', async function() {
       await increaseTimeTo(this.openingTime + duration.days(1));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(saleRates[0]*1e18);
     });
     it('should buy correct amount of tokens in the sale 2 phase by date', async function() {
       await increaseTimeTo(this.openingTime + duration.days(11));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(saleRates[1]*1e18);
     });
     it('should buy correct amount of tokens in the sale 3 phase by date', async function() {
       await increaseTimeTo(this.openingTime + duration.days(21));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.fulfilled;
       let balance = await this.token.balanceOf(investor1);
       balance.should.be.bignumber.equal(saleRates[2]*1e18);
     });
     it('should not allow buy tokens after the 3 phase by date', async function() {
       await increaseTimeTo(this.openingTime + duration.days(31));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1) }).should.be.rejectedWith(EVMRevert);
     });
     it('should forward funds to wallet after purchase during the sale', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       var amount = ether(1);
       const prePurchaseBalance = web3.eth.getBalance(wallet);
       await this.sale.buyTokens(investor1, {from: investor1, value: amount }).should.be.fulfilled;
@@ -139,7 +139,7 @@ contract('TokenSaleTest', function (accounts) {
     });
     it('should return funds to investor when too much eth was sent for all sale tokens', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       const prePurchaseBalance = web3.eth.getBalance(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(15000) }).should.be.fulfilled;
       const postPurchaseBalance = web3.eth.getBalance(investor1);
@@ -149,7 +149,7 @@ contract('TokenSaleTest', function (accounts) {
     });
    it('should mint  tokens while purchasing during sale', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(1)}).should.be.fulfilled;
       let totalSupply = await this.token.totalSupply();
       totalSupply.should.be.bignumber.equal(120000e18);
@@ -167,7 +167,7 @@ contract('TokenSaleTest', function (accounts) {
     });
     it('should allow finalize before closing time and tokens are sold', async function() {
       await increaseTimeTo(this.openingTime + duration.weeks(1));
-      await this.sale.addToWhitelist(investor1);
+      await this.sale.addAddressToWhitelist(investor1);
       await this.sale.buyTokens(investor1, {from: investor1, value: ether(15000) }).should.be.fulfilled;
       await this.sale.finalize().should.be.fulfilled;
     });
